@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Social Media Video Share</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; }
+        .upload-box { border: 2px dashed #ccc; padding: 20px; text-align: center; margin-bottom: 20px; }
+        #videoPreview { max-width: 100%; display: none; margin-top: 10px; }
+        .platform { margin: 10px 0; }
+        button { background: #4285f4; color: white; border: none; padding: 10px 15px; cursor: pointer; }
+        #status { margin-top: 20px; padding: 10px; display: none; }
+    </style>
+</head>
+<body>
+    <h1>Share Video to Social Media</h1>
+    
+    <div class="upload-box" id="uploadBox">
+        <p>Drag & drop your video here or click to select</p>
+        <input type="file" id="videoInput" accept="video/*" style="display: none;">
+        <video id="videoPreview" controls></video>
+    </div>
+    
+    <div>
+        <label for="title">Title:</label>
+        <input type="text" id="title" style="width: 100%; margin-bottom: 10px;">
+    </div>
+    
+    <div>
+        <label for="description">Description:</label>
+        <textarea id="description" style="width: 100%; height: 80px;"></textarea>
+    </div>
+    
+    <div class="platform">
+        <input type="checkbox" id="youtube"> <label for="youtube">YouTube</label>
+    </div>
+    <div class="platform">
+        <input type="checkbox" id="facebook"> <label for="facebook">Facebook</label>
+    </div>
+    <div class="platform">
+        <input type="checkbox" id="instagram"> <label for="instagram">Instagram</label>
+    </div>
+    <div class="platform">
+        <input type="checkbox" id="twitter"> <label for="twitter">Twitter</label>
+    </div>
+    
+    <button id="shareBtn">Share Video</button>
+    
+    <div id="status"></div>
+
+    <script>
+        document.getElementById('uploadBox').addEventListener('click', () => {
+            document.getElementById('videoInput').click();
+        });
+        
+        document.getElementById('videoInput').addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                const videoURL = URL.createObjectURL(file);
+                document.getElementById('videoPreview').src = videoURL;
+                document.getElementById('videoPreview').style.display = 'block';
+            }
+        });
+        
+        document.getElementById('shareBtn').addEventListener('click', async () => {
+            const videoFile = document.getElementById('videoInput').files[0];
+            const title = document.getElementById('title').value;
+            const description = document.getElementById('description').value;
+            
+            if (!videoFile) {
+                showStatus('Please select a video first', 'error');
+                return;
+            }
+            
+            const platforms = [];
+            if (document.getElementById('youtube').checked) platforms.push('youtube');
+            if (document.getElementById('facebook').checked) platforms.push('facebook');
+            if (document.getElementById('instagram').checked) platforms.push('instagram');
+            if (document.getElementById('twitter').checked) platforms.push('twitter');
+            
+            if (platforms.length === 0) {
+                showStatus('Select at least one platform', 'error');
+                return;
+            }
+            
+            const formData = new FormData();
+            formData.append('video', videoFile);
+            formData.append('title', title);
+            formData.append('description', description);
+            formData.append('platforms', JSON.stringify(platforms));
+            
+            try {
+                showStatus('Uploading...', 'loading');
+                
+                // Replace with your Cloudflare Worker URL
+                const response = await fetch('https://your-worker.your-account.workers.dev/upload', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    let successMessage = 'Successfully shared to: ';
+                    result.results.forEach(r => {
+                        if (r.success) successMessage += `${r.platform} (${r.url}), `;
+                    });
+                    showStatus(successMessage, 'success');
+                } else {
+                    showStatus('Error: ' + (result.error || 'Unknown error'), 'error');
+                }
+            } catch (error) {
+                showStatus('Network error: ' + error.message, 'error');
+            }
+        });
+        
+        function showStatus(message, type) {
+            const statusDiv = document.getElementById('status');
+            statusDiv.textContent = message;
+            statusDiv.style.display = 'block';
+            statusDiv.style.background = 
+                type === 'error' ? '#ffebee' : 
+                type === 'success' ? '#e8f5e9' : '#e3f2fd';
+        }
+    </script>
+</body>
+</html>
